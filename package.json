@@ -1,6 +1,6 @@
 {
   "name": "arima",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "ARIMA, SARIMA, SARIMAX and AutoARIMA models for time series analysis and forecasting",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "mkdirs": "mkdir wasm && mkdir wrapper",
     "prepare-wasm": "jsmaker wasm/native.wasm -t uint8 > wrapper/native.bin.js",
     "test": "tape test.js | faucet",
-    "build": "npm run clean && npm run mkdirs && make build && npm run prepare-wasm"
+    "build": "npm run clean && npm run mkdirs && make build"
   },
   "repository": {
     "type": "git",
