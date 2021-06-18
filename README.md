@@ -1,4 +1,7 @@
-# building for forge
+# arima
+Arima modeling in typescript (fork of https://github.com/zemlyansky/arima)
+
+## Building for forge
 
 1. Make sure [emscripten](https://emscripten.org) is installed. See instructions [here](https://emscripten.org/docs/getting_started/downloads.html)
 
