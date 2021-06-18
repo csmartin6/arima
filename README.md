@@ -1,3 +1,44 @@
+# building for forge
+
+1. Make sure [emscripten](https://emscripten.org) is installed. See instructions [here](https://emscripten.org/docs/getting_started/downloads.html)
+
+The relevant portion is 
+
+```bash
+# Get the emsdk repo
+git clone https://github.com/emscripten-core/emsdk.git
+
+# Enter that directory
+cd emsdk
+
+# Fetch the latest version of the emsdk (not needed the first time you clone)
+git pull
+
+# Download and install the latest SDK tools.
+./emsdk install latest
+
+# Make the "latest" SDK "active" for the current user. (writes .emscripten file)
+./emsdk activate latest
+
+# Activate PATH and other environment variables in the current terminal
+source ./emsdk_env.sh
+```
+
+2. run the build script
+
+`npm run-script build`
+
+
+3. Makes the arima package accessible to forge
+
+`pnpm link`
+
+4. To check that it is available:
+
+`pnpm view arima versions`
+
+There should be versions > 0.2.1
+
 # arima
 
 **Emscripten port of the native C package [ctsa](https://github.com/rafat/ctsa) for time series analysis and forecasting**
