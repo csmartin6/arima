@@ -63,3 +63,6 @@ function convertAutoArimaModelToCpp(model) {
     return __assign(__assign({}, model), { phi: phi, theta: theta, PHI: PHI, THETA: THETA, res: res });
 }
 exports.convertAutoArimaModelToCpp = convertAutoArimaModelToCpp;
+function isAutoArima(model) {
+    return model.pmax !== undefined;
+}

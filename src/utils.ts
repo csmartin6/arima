@@ -89,3 +89,8 @@ export function convertAutoArimaModelToCpp(model: IAutoArimaModel): IAutoArimaMo
         res,
     }
 }
+
+
+function isAutoArima(model: IAutoArimaModel | ISarimaxModel): model is IAutoArimaModel {
+    return (model as IAutoArimaModel).pmax !== undefined;
+  }

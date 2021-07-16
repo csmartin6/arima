@@ -203,7 +203,7 @@ declare namespace Emscripten {
         method: number,
         optimizer: number,
         verbose: boolean) => ISarimaxModelCpp
-        predict_sarimax: (
+      predict_sarimax: (
         model: ISarimaxModelCpp, 
         ts: IDoubleVector,
         exog: IDoubleVector,

@@ -60,7 +60,6 @@ function testData(): number[] {
 
         const fittedArima = await arima.fit(ts);
         const [pred, errors] = fittedArima.predict(12);
-        console.log("pred: ", pred);
         expect(pred.length).toEqual(12);
         expect(errors.length).toEqual(12);
     });
@@ -81,7 +80,6 @@ function testData(): number[] {
 
         const fittedArima = await arima.fit(ts);
         const [pred, errors] = fittedArima.predict(12);
-        console.log("pred: ", pred);
         expect(pred.length).toEqual(12);
         expect(errors.length).toEqual(12);
     });

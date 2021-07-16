@@ -7,7 +7,7 @@ FILES = ctsa/src/*.c
 
 EXPORTED_FUNCTIONS="['_fit_sarimax_old', '_predict_sarimax_old', '_fit_autoarima_old', '_predict_autoarima_old']"
 
-CFLAGS = -Wall -fPIC --memory-init-file 0 # -O3 
+CFLAGS = -Wall -fPIC --memory-init-file 0 -O3 
 EMCFLAGS = -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_FUNCTIONS=$(EXPORTED_FUNCTIONS) -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' -s MODULARIZE=1 -s WASM=0 --bind 
 
 # build:
