@@ -10,7 +10,7 @@
 
 // // import Modules = require("./wasm/native.js");
 
-// // import * as Module from "./wasm/native.js";
+// // import * anpm install --save-dev babel-jests Module from "./wasm/native.js";
 
 // // const bin = require('./wrapper/native.bin.js')
 // const m = await createInstance({});
@@ -24,7 +24,10 @@
 
 
 import ModuleLoader from './arima-emscripten-module'
-import { ArimaEmscriptenModule, DoubleVector } from './emscripten-types'
+import { ArimaEmscriptenModule, IDoubleVector } from './emscripten-types'
+// import { ISarimaxModel } from './types'
+import { convertAutoArimaModelToCpp, convertAutoModelCppModel, convertSarimaxCppModel, convertSarimaxModelToCpp } from './utils'
+import { chunk } from "lodash";
 
 let ArimaModule: ArimaEmscriptenModule | undefined = undefined
 
@@ -35,7 +38,7 @@ const ready = ModuleLoader().then(loadedModule => {
 /**
  * @throws if not ready
  */
- function getArimaEmscriptenModule(): ArimaEmscriptenModule {
+ export function getArimaEmscriptenModule(): ArimaEmscriptenModule {
     if (!ArimaModule) {
       throw new Error(
         'Arima WASM module not initialized. Either wait for `ready` or use getArima()'
@@ -64,7 +67,7 @@ const ready = ModuleLoader().then(loadedModule => {
 //     "number",
 //     "boolean",
 // ]);
-// // tslint:disable-next-line variable-name
+// tslint:disable-next-line variable-name
 // const _predict_sarimax = m.cwrap("predict_sarimax", "number", ["number", "array", "array", "array", "number"]);
 // // tslint:disable-next-line variable-name
 // const _fit_autoarima = m.cwrap("fit_autoarima", "number", [
@@ -198,73 +201,84 @@ const DEFAULT_OPTIONS = {
 
 export class Arima {
     private ts: Uint8Array;
+    private tsArray: number[];
     private exog: Uint8Array;
+    private exogArray: number[];
     private nexog: number = 0;
     private lin: number = 0;
     private options: IOptions = DEFAULT_OPTIONS;
+    public modelCpp?: any;
     public model?: any;
+    public modelObject?: any;
     private m = getArimaEmscriptenModule()
 
     constructor(options: Partial<IOptions>) {
         this.ts = uintify([]);
         this.exog = uintify([]);
         this.options = { ...DEFAULT_OPTIONS, ...options };
+        this.tsArray = [];
+        this.exogArray = [];
     }
 
     
 
-    public train(ts: number[], exog = []) {
+    public train(ts: number[], exog = []): Arima {
         const o = this.options;
         if (o.transpose && Array.isArray(exog[0])) {
             exog = transpose(exog);
         }
+        this.tsArray = ts;
+        this.exogArray = exog;
         this.ts = uintify(prepare(ts));
-        const tsVec: DoubleVector = new (this.m.DoubleVector as any)(); 
+        // todo (cmartin) is this "as any" necessary
+        const tsVec: IDoubleVector = new (this.m.DoubleVector as any)(); 
         ts.forEach((x) => tsVec.push_back(x));
-        const exogVec: DoubleVector = new (this.m.DoubleVector as any)(); 
-
+        const exogVec: IDoubleVector = new (this.m.DoubleVector as any)(); 
+        exog.forEach((x) => exogVec.push_back(x));
 
         this.exog = uintify(prepare(exog));
         this.lin = ts.length;
         this.nexog = exog.length > 0 ? (Array.isArray(exog[0]) ? exog.length : 1) : 0;
-        // this.model = o.auto
-        //     ? this._fit_autoarima(
-        //           this.ts,
-        //           this.exog,
-        //           o.p,
-        //           o.d,
-        //           o.q,
-        //           o.P,
-        //           o.D,
-        //           o.Q,
-        //           o.s,
-        //           this.nexog,
-        //           this.lin,
-        //           o.method,
-        //           o.optimizer,
-        //           o.approximation,
-        //           o.search,
-        //           o.verbose,
-        //       )
-        //     : this._fit_sarimax(
-        //           this.ts,
-        //           this.exog,
-        //           o.p,
-        //           o.d,
-        //           o.q,
-        //           o.P,
-        //           o.D,
-        //           o.Q,
-        //           o.s,
-        //           this.nexog,
-        //           this.lin,
-        //           o.method,
-        //           o.optimizer,
-        //           o.verbose,
-        //       );
-
-        this.model = o.auto
-            ? this._fit_autoarima(
+        if (o.auto) {
+            this.modelObject =  this._fit_autoarima_old(
+                this.ts,
+                this.exog,
+                o.p,
+                o.d,
+                o.q,
+                o.P,
+                o.D,
+                o.Q,
+                o.s,
+                this.nexog,
+                this.lin,
+                o.method,
+                o.optimizer,
+                o.approximation,
+                o.search,
+                o.verbose,
+              )
+            this.modelCpp = this.m.fit_autoarima(
+                tsVec,
+                exogVec,
+                o.p,
+                o.d,
+                o.q,
+                o.P,
+                o.D,
+                o.Q,
+                o.s,
+                this.nexog,
+                this.lin,
+                o.method,
+                o.optimizer,
+                o.approximation,
+                o.search,
+                o.verbose,
+            )
+            this.model = convertSarimaxCppModel(this.modelCpp)
+            } else {
+                this.modelObject = this._fit_sarimax_old(
                   this.ts,
                   this.exog,
                   o.p,
@@ -278,13 +292,11 @@ export class Arima {
                   this.lin,
                   o.method,
                   o.optimizer,
-                  o.approximation,
-                  o.search,
                   o.verbose,
-              )
-            : this.m.test_sarimax_vector(
-                  tsVec,
-                  exogVec,
+              );
+              this.modelCpp = this.m.fit_sarimax(
+                tsVec,
+                exogVec,
                   o.p,
                   o.d,
                   o.q,
@@ -297,7 +309,10 @@ export class Arima {
                   o.method,
                   o.optimizer,
                   o.verbose,
-              );
+            )
+              this.model = convertAutoModelCppModel(this.modelCpp)
+        }
+        
         return this;
     }
 
@@ -305,50 +320,83 @@ export class Arima {
         return this.train(a);
     }
 
-    public predict(l: number, exog = []) {
+    public predict(l: number, exog = []): number[][]{
         const o = this.options;
         if (o.transpose && Array.isArray(exog[0])) {
             exog = transpose(exog);
         }
-        const addr = o.auto
-            ? this._predict_autoarima(
-                  this.model,
+
+        let old_res;
+        if (o.auto) {
+            const addr = this._predict_autoarima_old(
+                  this.modelCpp,
                   this.ts,
                   this.exog, // old
                   uintify(prepare(exog)), // new
                   l,
               )
-            : this._predict_sarimax(
-                  this.model,
-                  this.ts,
-                  this.exog, // old
-                  uintify(prepare(exog)), // new
+              old_res = this.getResults(addr, l)
+        } else {
+            const addr = this._predict_sarimax_old(
+                this.modelObject,
+                this.ts,
+                this.exog, // old
+                uintify(prepare(exog)), // new
+                l,
+            )
+            old_res = this.getResults(addr, l)
+        }
+
+
+
+        const tsVec: IDoubleVector = new (this.m.DoubleVector as any)(); 
+        this.tsArray.forEach(x => tsVec.push_back(x));
+        const exogVec: IDoubleVector = new (this.m.DoubleVector as any)(); 
+        this.exogArray.forEach(x => exogVec.push_back(x));
+        const newExogVec: IDoubleVector = new (this.m.DoubleVector as any)(); 
+        exog.forEach(x => newExogVec.push_back(x));
+        const result: IDoubleVector = 
+        (o.auto) ? this.m.predict_autoarima(
+            convertAutoArimaModelToCpp(this.model),
+            tsVec,
+            exogVec, // old
+            newExogVec, // new
+            l,
+        ): this.m.predict_sarimax(
+                  convertSarimaxModelToCpp(this.model),
+                  tsVec,
+                  exogVec, // old
+                  newExogVec, // new
                   l,
               );
-        return this.getResults(addr, l);
+
+        const res = new Array(result.size()).fill(0).map((_, id) => result.get(id))
+
+        const toReturn = chunk(res, l);
+        return toReturn;
     }
 
     // tslint:disable-next-line variable-name
-    // private _fit_sarimax = this.m.cwrap("fit_sarimax", "number", [
-    //     "array",
-    //     "array",
-    //     "number",
-    //     "number",
-    //     "number",
-    //     "number",
-    //     "number",
-    //     "number",
-    //     "number",
-    //     "number",
-    //     "number",
-    //     "number",
-    //     "number",
-    //     "boolean",
-    // ]);
+    private _fit_sarimax_old = this.m.cwrap("fit_sarimax_old", "number", [
+        "array",
+        "array",
+        "number",
+        "number",
+        "number",
+        "number",
+        "number",
+        "number",
+        "number",
+        "number",
+        "number",
+        "number",
+        "number",
+        "boolean",
+    ]);
     // tslint:disable-next-line variable-name
-    private _predict_sarimax = this.m.cwrap("predict_sarimax", "number", ["number", "array", "array", "array", "number"]);
+    private _predict_sarimax_old = this.m.cwrap("predict_sarimax_old", "number", ["number", "array", "array", "array", "number"]);
     // tslint:disable-next-line variable-name
-    private _fit_autoarima = this.m.cwrap("fit_autoarima", "number", [
+    private _fit_autoarima_old = this.m.cwrap("fit_autoarima_old", "number", [
         "array",
         "array",
         "number",
@@ -367,7 +415,7 @@ export class Arima {
         "boolean",
     ]);
     // tslint:disable-next-line variable-name
-    private _predict_autoarima = this.m.cwrap("predict_autoarima", "number", ["number", "array", "array", "array", "number"]);
+    private _predict_autoarima_old = this.m.cwrap("predict_autoarima_old", "number", ["number", "array", "array", "array", "number"]);
 
     private getResults(addr: number, l: number): number[][] {
         const res: number[][] = [[], []];

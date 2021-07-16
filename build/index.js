@@ -53,13 +53,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getArima = exports.Arima = void 0;
+exports.getArima = exports.Arima = exports.getArimaEmscriptenModule = void 0;
 // import createArimaModeler from "./wasm/native.js";
 // export async function createInstance(module) {
 //   return createArimaModeler(module);
 // }
 // // import Modules = require("./wasm/native.js");
-// // import * as Module from "./wasm/native.js";
+// // import * anpm install --save-dev babel-jests Module from "./wasm/native.js";
 // // const bin = require('./wrapper/native.bin.js')
 // const m = await createInstance({});
 // // const m  = Module.instantiateWasm(); // Module({ wasmBinary: bin.data })
@@ -67,6 +67,9 @@ exports.getArima = exports.Arima = void 0;
 // import * as Module from "./wasm/native.js";
 // import Module = require("./wasm/native.js");
 var arima_emscripten_module_1 = __importDefault(require("./arima-emscripten-module"));
+// import { ISarimaxModel } from './types'
+var utils_1 = require("./utils");
+var lodash_1 = require("lodash");
 var ArimaModule = undefined;
 var ready = arima_emscripten_module_1.default().then(function (loadedModule) {
     ArimaModule = loadedModule;
@@ -80,6 +83,7 @@ function getArimaEmscriptenModule() {
     }
     return ArimaModule;
 }
+exports.getArimaEmscriptenModule = getArimaEmscriptenModule;
 // const m = getArimaEmscriptenModule(); // Module({ wasmBinary: bin.data })
 // // tslint:disable-next-line variable-name
 // const _fit_sarimax = m.cwrap("fit_sarimax", "number", [
@@ -98,7 +102,7 @@ function getArimaEmscriptenModule() {
 //     "number",
 //     "boolean",
 // ]);
-// // tslint:disable-next-line variable-name
+// tslint:disable-next-line variable-name
 // const _predict_sarimax = m.cwrap("predict_sarimax", "number", ["number", "array", "array", "array", "number"]);
 // // tslint:disable-next-line variable-name
 // const _fit_autoarima = m.cwrap("fit_autoarima", "number", [
@@ -182,26 +186,26 @@ var Arima = /** @class */ (function () {
         this.options = DEFAULT_OPTIONS;
         this.m = getArimaEmscriptenModule();
         // tslint:disable-next-line variable-name
-        // private _fit_sarimax = this.m.cwrap("fit_sarimax", "number", [
-        //     "array",
-        //     "array",
-        //     "number",
-        //     "number",
-        //     "number",
-        //     "number",
-        //     "number",
-        //     "number",
-        //     "number",
-        //     "number",
-        //     "number",
-        //     "number",
-        //     "number",
-        //     "boolean",
-        // ]);
+        this._fit_sarimax_old = this.m.cwrap("fit_sarimax_old", "number", [
+            "array",
+            "array",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "boolean",
+        ]);
         // tslint:disable-next-line variable-name
-        this._predict_sarimax = this.m.cwrap("predict_sarimax", "number", ["number", "array", "array", "array", "number"]);
+        this._predict_sarimax_old = this.m.cwrap("predict_sarimax_old", "number", ["number", "array", "array", "array", "number"]);
         // tslint:disable-next-line variable-name
-        this._fit_autoarima = this.m.cwrap("fit_autoarima", "number", [
+        this._fit_autoarima_old = this.m.cwrap("fit_autoarima_old", "number", [
             "array",
             "array",
             "number",
@@ -220,10 +224,12 @@ var Arima = /** @class */ (function () {
             "boolean",
         ]);
         // tslint:disable-next-line variable-name
-        this._predict_autoarima = this.m.cwrap("predict_autoarima", "number", ["number", "array", "array", "array", "number"]);
+        this._predict_autoarima_old = this.m.cwrap("predict_autoarima_old", "number", ["number", "array", "array", "array", "number"]);
         this.ts = uintify([]);
         this.exog = uintify([]);
         this.options = __assign(__assign({}, DEFAULT_OPTIONS), options);
+        this.tsArray = [];
+        this.exogArray = [];
     }
     Arima.prototype.train = function (ts, exog) {
         if (exog === void 0) { exog = []; }
@@ -231,51 +237,27 @@ var Arima = /** @class */ (function () {
         if (o.transpose && Array.isArray(exog[0])) {
             exog = transpose(exog);
         }
+        this.tsArray = ts;
+        this.exogArray = exog;
         this.ts = uintify(prepare(ts));
+        // todo (cmartin) is this "as any" necessary
         var tsVec = new this.m.DoubleVector();
         ts.forEach(function (x) { return tsVec.push_back(x); });
         var exogVec = new this.m.DoubleVector();
+        exog.forEach(function (x) { return exogVec.push_back(x); });
         this.exog = uintify(prepare(exog));
         this.lin = ts.length;
         this.nexog = exog.length > 0 ? (Array.isArray(exog[0]) ? exog.length : 1) : 0;
-        // this.model = o.auto
-        //     ? this._fit_autoarima(
-        //           this.ts,
-        //           this.exog,
-        //           o.p,
-        //           o.d,
-        //           o.q,
-        //           o.P,
-        //           o.D,
-        //           o.Q,
-        //           o.s,
-        //           this.nexog,
-        //           this.lin,
-        //           o.method,
-        //           o.optimizer,
-        //           o.approximation,
-        //           o.search,
-        //           o.verbose,
-        //       )
-        //     : this._fit_sarimax(
-        //           this.ts,
-        //           this.exog,
-        //           o.p,
-        //           o.d,
-        //           o.q,
-        //           o.P,
-        //           o.D,
-        //           o.Q,
-        //           o.s,
-        //           this.nexog,
-        //           this.lin,
-        //           o.method,
-        //           o.optimizer,
-        //           o.verbose,
-        //       );
-        this.model = o.auto
-            ? this._fit_autoarima(this.ts, this.exog, o.p, o.d, o.q, o.P, o.D, o.Q, o.s, this.nexog, this.lin, o.method, o.optimizer, o.approximation, o.search, o.verbose)
-            : this.m.test_sarimax_vector(tsVec, exogVec, o.p, o.d, o.q, o.P, o.D, o.Q, o.s, this.nexog, this.lin, o.method, o.optimizer, o.verbose);
+        if (o.auto) {
+            this.modelObject = this._fit_autoarima_old(this.ts, this.exog, o.p, o.d, o.q, o.P, o.D, o.Q, o.s, this.nexog, this.lin, o.method, o.optimizer, o.approximation, o.search, o.verbose);
+            this.modelCpp = this.m.fit_autoarima(tsVec, exogVec, o.p, o.d, o.q, o.P, o.D, o.Q, o.s, this.nexog, this.lin, o.method, o.optimizer, o.approximation, o.search, o.verbose);
+            this.model = utils_1.convertSarimaxCppModel(this.modelCpp);
+        }
+        else {
+            this.modelObject = this._fit_sarimax_old(this.ts, this.exog, o.p, o.d, o.q, o.P, o.D, o.Q, o.s, this.nexog, this.lin, o.method, o.optimizer, o.verbose);
+            this.modelCpp = this.m.fit_sarimax(tsVec, exogVec, o.p, o.d, o.q, o.P, o.D, o.Q, o.s, this.nexog, this.lin, o.method, o.optimizer, o.verbose);
+            this.model = utils_1.convertAutoModelCppModel(this.modelCpp);
+        }
         return this;
     };
     Arima.prototype.fit = function (a) {
@@ -287,14 +269,33 @@ var Arima = /** @class */ (function () {
         if (o.transpose && Array.isArray(exog[0])) {
             exog = transpose(exog);
         }
-        var addr = o.auto
-            ? this._predict_autoarima(this.model, this.ts, this.exog, // old
-            uintify(prepare(exog)), // new
-            l)
-            : this._predict_sarimax(this.model, this.ts, this.exog, // old
+        var old_res;
+        if (o.auto) {
+            var addr = this._predict_autoarima_old(this.modelCpp, this.ts, this.exog, // old
             uintify(prepare(exog)), // new
             l);
-        return this.getResults(addr, l);
+            old_res = this.getResults(addr, l);
+        }
+        else {
+            var addr = this._predict_sarimax_old(this.modelObject, this.ts, this.exog, // old
+            uintify(prepare(exog)), // new
+            l);
+            old_res = this.getResults(addr, l);
+        }
+        var tsVec = new this.m.DoubleVector();
+        this.tsArray.forEach(function (x) { return tsVec.push_back(x); });
+        var exogVec = new this.m.DoubleVector();
+        this.exogArray.forEach(function (x) { return exogVec.push_back(x); });
+        var newExogVec = new this.m.DoubleVector();
+        exog.forEach(function (x) { return newExogVec.push_back(x); });
+        var result = (o.auto) ? this.m.predict_autoarima(utils_1.convertAutoArimaModelToCpp(this.model), tsVec, exogVec, // old
+        newExogVec, // new
+        l) : this.m.predict_sarimax(utils_1.convertSarimaxModelToCpp(this.model), tsVec, exogVec, // old
+        newExogVec, // new
+        l);
+        var res = new Array(result.size()).fill(0).map(function (_, id) { return result.get(id); });
+        var toReturn = lodash_1.chunk(res, l);
+        return toReturn;
     };
     Arima.prototype.getResults = function (addr, l) {
         var res = [[], []];

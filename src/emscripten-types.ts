@@ -11,25 +11,6 @@
 // - some upstream types reference web-only ambient types like WebGL stuff, which
 //   we don't use.
 
-export interface EmClassHandle {
-  clone(): EmClassHandle
-  delete(): void
-  deleteLater(): unknown
-  isAliasOf(other: unknown): boolean
-  isDeleted(): boolean
-}
-
-export interface EmVector<T> extends EmClassHandle {
-  delete(): void
-  get(pos: number): T
-  push_back(value: T): void
-  resize(n: number, val: T): void
-  set(pos: number, value: T): boolean
-  size(): number
-}
-
-
-
 declare namespace Emscripten {
     interface FileSystemType {}
     type EnvironmentType = 'WEB' | 'NODE' | 'SHELL' | 'WORKER'
@@ -52,13 +33,101 @@ declare namespace Emscripten {
     }
   }
 
-  interface sarimaxModel {
-     N: number,
-     Nused: number,
+  export interface ISarimaxModelCpp {
+    N: number
+    Nused: number
+    method: number
+	  optmethod: number
+	  p: number// size of phi
+    d: number// Number of times the series is to be differenced
+    q: number//size of theta
+    s: number// Seasonality/Period
+    P: number//Size of seasonal phi
+    D: number// The number of times the seasonal series is to be differenced
+    Q: number//size of Seasonal Theta
+    r: number// Number of exogenous variables
+    M: number // M = 0 if mean is 0.0 else M = 1
+    ncoeff: number// Total Number of Coefficients to be estimated
+    phi: IDoubleVector
+    theta: IDoubleVector
+    PHI: IDoubleVector
+    THETA: IDoubleVector
+    // double *exog;
+    // double *vcov;// Variance-Covariance Matrix Of length lvcov
+    lvcov: number; //length of VCOV
+    res: IDoubleVector
+    mean: number
+    var: number
+    loglik: number
+    aic: number
+    retval: number
+    start: number
+    imean: number
   }
 
-  export declare interface DoubleVector {
-    clone(): DoubleVector
+  export interface IAutoArimaModelCpp {
+    N: number
+    Nused: number
+    method: number
+	  optmethod: number
+    pmax: number // Maximum size of phi
+    dmax: number // Maximum Number of times the series is to be differenced
+    qmax: number // Maximum size of theta
+    Pmax: number //Maximum Size of seasonal phi
+    Dmax: number // Maximum number of times the seasonal series is to be differenced
+    Qmax: number //Maximum size of Seasonal Theta
+	  p: number// size of phi
+    d: number// Number of times the series is to be differenced
+    q: number//size of theta
+    s: number// Seasonality/Period
+    P: number//Size of seasonal phi
+    D: number// The number of times the seasonal series is to be differenced
+    Q: number//size of Seasonal Theta
+    r: number// Number of exogenous variables
+    M: number // M = 0 if mean is 0.0 else M = 1
+    ncoeff: number// Total Number of Coefficients to be estimated
+    phi: IDoubleVector
+    theta: IDoubleVector
+    PHI: IDoubleVector
+    THETA: IDoubleVector
+    // exog: IDoubleVector
+    // vcov: IDoubleVector // Variance-Covariance Matrix Of length lvcov
+    lvcov: number; //length of VCOV
+    res: IDoubleVector
+    mean: number
+    var: number
+    loglik: number
+    ic: number
+    retval: number
+    start: number
+    imean: number
+    idrift: number
+    stationary: number
+    seasonal: number
+    Order_max: number
+    p_start: number
+    q_start: number
+    P_start: number
+    Q_start: number
+    information_criteria: string
+    stepwise: number
+    num_models: number
+    approximation: number
+    verbose: number
+    test: string
+    type: string
+    seas: string
+    alpha_test: number
+    alpha_seas: number
+    lambda: number
+    sigma2: number
+    aic: number
+    bic: number
+    aicc: number
+  }
+
+  export declare interface IDoubleVector {
+    clone(): IDoubleVector
     delete(): void
     deleteLater(): unknown
     isAliasOf(other: unknown): boolean
@@ -104,7 +173,7 @@ declare namespace Emscripten {
     TOTAL_STACK: number
     TOTAL_MEMORY: number
     FAST_MEMORY: number
-    fit_sarimax: (
+    fit_sarimax_old: (
       ts: Uint8Array,
       exog: Uint8Array,
       p: number,
@@ -118,10 +187,10 @@ declare namespace Emscripten {
       lin: number,
       method: number,
       optimizer: number,
-      verbose: boolean) => sarimaxModel
-      test_sarimax_vector: (
-        ts: DoubleVector,
-        exog: DoubleVector,
+      verbose: boolean) => ISarimaxModelCpp
+      fit_sarimax: (
+        ts: IDoubleVector,
+        exog: IDoubleVector,
         p: number,
         d: number,
         q: number,
@@ -133,7 +202,35 @@ declare namespace Emscripten {
         lin: number,
         method: number,
         optimizer: number,
-        verbose: boolean) => sarimaxModel
-      test_sarimax: (n: number, nUsed: number)=>sarimaxModel
-      DoubleVector: () => DoubleVector
+        verbose: boolean) => ISarimaxModelCpp
+        predict_sarimax: (
+        model: ISarimaxModelCpp, 
+        ts: IDoubleVector,
+        exog: IDoubleVector,
+        newexogVec: IDoubleVector,
+        lout: number) => IDoubleVector
+      fit_autoarima: (
+          ts: IDoubleVector,
+          exog: IDoubleVector,
+          p: number,  // Max p
+          d: number, // Max d
+          q: number, // Max q
+          P: number, // Max P
+          D: number, // Max D
+          Q: number, // Max Q
+          s: number, 
+          nexog: number,
+          lin: number,
+          method: number,
+          optimizer: number,
+          approximation: number,
+          search: number,
+          verbose: boolean) => IAutoArimaModelCpp
+        predict_autoarima: (
+          model: IAutoArimaModelCpp, 
+          ts: IDoubleVector,
+          exog: IDoubleVector,
+          newexogVec: IDoubleVector,
+          lout: number) => IDoubleVector
+      DoubleVector: () => IDoubleVector
   }

@@ -40,49 +40,118 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var index_1 = require("../index");
-function add(x, y) {
-    var z = x + y;
-    return z;
+var fs_1 = require("fs");
+function testData() {
+    var file = fs_1.readFileSync('src/api/data/S4248SM144NCEN.txt', 'utf-8');
+    var numbers = file.split("\n").map(Number.parseFloat);
+    return numbers.slice(200, numbers.length - 20); // numbers.length - 12)
+    // return [9225, 9948, 8758, 10839, 7266, 7578, 8688, 9162, 9369, 10167, 9507, 8923, 9272, 90175, 8949, 10843, 6558, 7481, 9475, 9424, 9351, 10552, 9077, 9273, 9420];
 }
-function predictUsingArima() {
-    return __awaiter(this, void 0, void 0, function () {
+describe("Dummy Tests", function () {
+    test("Sarimax Simple", function () { return __awaiter(void 0, void 0, void 0, function () {
         var ts, arima, fittedArima, _a, pred, errors;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
-                    ts = Array(24)
-                        .fill(0)
-                        .map(function (_, i) { return i + Math.random() / 5; });
+                    ts = testData();
                     return [4 /*yield*/, index_1.getArima({
                             p: 2,
-                            d: 1,
-                            q: 2,
-                            verbose: false,
+                            d: 0,
+                            q: 1,
+                            verbose: true,
                         })];
                 case 1:
                     arima = _b.sent();
-                    fittedArima = arima.fit(ts);
-                    console.log("fitterModel:", fittedArima.model);
+                    return [4 /*yield*/, arima.fit(ts)];
+                case 2:
+                    fittedArima = _b.sent();
                     _a = fittedArima.predict(12), pred = _a[0], errors = _a[1];
-                    // eslint-disable-next-line no-console
-                    console.log("errors: ", errors);
-                    return [2 /*return*/, pred];
+                    expect(pred.length).toEqual(12);
+                    expect(errors.length).toEqual(12);
+                    return [2 /*return*/];
             }
         });
-    });
-}
-describe("Dummy Tests", function () {
-    test("Add", function () {
-        expect(add(0, 1)).toEqual(1);
-    });
-    test("Construct Arima", function () { return __awaiter(void 0, void 0, void 0, function () {
-        var predictions;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, predictUsingArima()];
+    }); });
+    test("Sarimax Seasonal", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var ts, arima, fittedArima, _a, pred, errors;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    ts = testData();
+                    return [4 /*yield*/, index_1.getArima({
+                            p: 0,
+                            d: 1,
+                            q: 1,
+                            P: 2,
+                            D: 1,
+                            Q: 1,
+                            s: 12,
+                            verbose: true,
+                        })];
                 case 1:
-                    predictions = _a.sent();
-                    expect(predictions.length).toEqual(12);
+                    arima = _b.sent();
+                    return [4 /*yield*/, arima.fit(ts)];
+                case 2:
+                    fittedArima = _b.sent();
+                    _a = fittedArima.predict(12), pred = _a[0], errors = _a[1];
+                    expect(pred.length).toEqual(12);
+                    expect(errors.length).toEqual(12);
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    test("Auto Arima", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var ts, arima, fittedArima, _a, pred, errors;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    ts = testData();
+                    return [4 /*yield*/, index_1.getArima({
+                            p: 5,
+                            d: 2,
+                            q: 5,
+                            verbose: true,
+                            auto: true,
+                        })];
+                case 1:
+                    arima = _b.sent();
+                    return [4 /*yield*/, arima.fit(ts)];
+                case 2:
+                    fittedArima = _b.sent();
+                    _a = fittedArima.predict(12), pred = _a[0], errors = _a[1];
+                    console.log("pred: ", pred);
+                    expect(pred.length).toEqual(12);
+                    expect(errors.length).toEqual(12);
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    test("Auto Arima Seasonal", function () { return __awaiter(void 0, void 0, void 0, function () {
+        var ts, arima, fittedArima, _a, pred, errors;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    ts = testData();
+                    return [4 /*yield*/, index_1.getArima({
+                            p: 5,
+                            d: 2,
+                            q: 5,
+                            P: 2,
+                            D: 1,
+                            Q: 2,
+                            s: 12,
+                            verbose: true,
+                            auto: true,
+                        })];
+                case 1:
+                    arima = _b.sent();
+                    return [4 /*yield*/, arima.fit(ts)];
+                case 2:
+                    fittedArima = _b.sent();
+                    _a = fittedArima.predict(12), pred = _a[0], errors = _a[1];
+                    console.log("pred: ", pred);
+                    expect(pred.length).toEqual(12);
+                    expect(errors.length).toEqual(12);
                     return [2 /*return*/];
             }
         });
