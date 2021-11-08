@@ -1,5 +1,6 @@
-node_modules/
-wrapper/
-wasm/
-*.swp
-npm-debug.log
+# ctsa (c library)
+ctsa/
+!copyright/ctsa
+
+.vscode
+node_modules

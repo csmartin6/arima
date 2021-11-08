@@ -4,9 +4,7 @@
   "description": "ARIMA, SARIMA, SARIMAX and AutoARIMA models for time series analysis and forecasting",
   "main": "index.js",
   "scripts": {
-    "clean": "rimraf src/wasm && rimraf src/wrapper",
     "mkdirs": "mkdir src/wasm && mkdir src/wrapper",
-    "prepare-wasm": "jsmaker wasm/native.wasm -t uint8 > wrapper/native.bin.js",
     "test": "npx tsc && jest",
     "build": "npm run clean && npm run mkdirs && make buildWasm"
   },
@@ -55,5 +53,52 @@
       "tsx",
       "js"
     ]
+  }
+}
+{
+  "name": "@cmartin/arima",
+  "version": "0.0.0",
+  "description": "Autoregressive timeeries models for quiver",
+  "author": "Palantir Technologies, Inc.",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "build": "make buildWasm",
+    "ci-publish": "../../../gradlew publish",
+    "clean": "../../../gradlew clean",
+    "configure": "../../../gradlew configure",
+    "dev": "../../../gradlew dev",
+    "dist": "NODE_ENV=production ../../../gradlew build",
+    "lint": "../../../gradlew lint",
+    "test": "npx tsc && jest",
+    "verify": "../../../gradlew verify",
+    "visualize": "wizard visualize",
+    "generate": "wizard generate",
+    "wizard-bin": "wizard-bin"
+  },
+  "dependencies": {
+    "@types/emscripten": "^1.39.5",
+    "fs-extra": "^8.1.0",
+    "lodash-es": "^4.17.15",
+    "tslib": "~2.3.1"
+  },
+  "devDependencies": {
+    "@types/emscripten": "^1.39.5",
+    "@types/fs-extra": "^8.0.0",
+    "@types/lodash-es": "^4.17.3"
+
+  },
+  "wizard": {
+    "type": "library"
+  },
+  "bugs": "https://github.palantir.build/foundry/quiver-app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.palantir.build/cmartin/arima.git"
   }
 }

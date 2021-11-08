@@ -6,81 +6,87 @@
 #include <string>
 #include "./api.h"
 #include <chrono>
+#include <random>
+
 
 using namespace std;
 
+std::random_device rd;
+std::mt19937 mt(rd());
+std::uniform_real_distribution<double> dist(1.0, 10.0);
+
+
+double get_rand() {
+    return dist(mt);
+}
+
 int main()
-{   
-    std::ifstream is("src/api/data/S4248SM144NCEN.txt");
+{
+    std::ifstream is("../../resources/data/S4248SM144NCEN.txt");
     std::istream_iterator<double> start(is), end;
     std::vector<double> numbers(start, end);
     std::cout << "Read " << numbers.size() << " numbers" << std::endl;
     vector<double> ts(numbers.begin()+200, numbers.end()-20);
-    vector<double> exog;
-    int p = 0;
+    std::cout << "Using " << ts.size() << " numbers" << std::endl;
+    // vector<double> exog(numbers.begin(),numbers.begin()+133);
+
+    int p = 2;
     int d = 1;
-    int q = 1;
+    int q = 0;
     int P = 2;
     int D = 1;
     int Q = 1;
     int s = 12;
-    int nexog = 0;
+    int nexog = 2;
     int lin = ts.size();
     int method = 0;
     int opt = 6;
     int approximation = 0;
     int search = 0;
 
+    vector<double> exog(ts.size() * nexog, 0.0);
+    std::generate(exog.begin(), exog.end(), get_rand);
     bool verbose = true;
 
-    double* ts_ptr = ts.data();
-    for (int i = 0; i < ts.size(); ++i) {
-		ts_ptr[i] = ts[i];
-	}
-    double* exog_ptr = exog.data();
-    for (int i = 0; i < exog.size(); ++i) {
-		exog_ptr[i] = ts[i];
-	}
 
+    auto fit_start = std::chrono::high_resolution_clock::now();
+    CompiledModel model = fit(ts, exog, p, d, q, P, D, Q, s,  nexog, lin, method, opt, verbose);
 
-    auto fit_sarimax_start = std::chrono::high_resolution_clock::now();
-    sarimax_object* obj = fit_sarimax_old(ts.data(), exog.data(), p, d, q, P, D, Q, s,  nexog, lin, method, opt, verbose);
-    auto fit_sarimax_end = std::chrono::high_resolution_clock::now();
-    auto fit_sarimax_ms = std::chrono::duration_cast<std::chrono::milliseconds>(fit_sarimax_end - fit_sarimax_start);
-    CompiledSarimax model_from_obj = SarimaxObject2CompiledSarimax(obj);
-
-    sarimax_object* obj2 =  CompiledSarimax2SarimaxObject(SarimaxObject2CompiledSarimax(obj));
-    CompiledSarimax model_from_obj2 = SarimaxObject2CompiledSarimax(obj2);
-    
-    auto fit_sarimax_vector_start = std::chrono::high_resolution_clock::now();
-    CompiledSarimax model = fit_sarimax(ts, exog, p, d, q, P, D, Q, s,  nexog, lin, method, opt, verbose);
-    auto fit_sarimax_vector_end = std::chrono::high_resolution_clock::now();
-    auto fit_sarimax_vector_ms = std::chrono::duration_cast<std::chrono::milliseconds>(fit_sarimax_vector_end - fit_sarimax_vector_start);
-    sarimax_object* obj_from_model = CompiledSarimax2SarimaxObject(model);
-
+    auto fit_end = std::chrono::high_resolution_clock::now();
+    auto fit_ms = std::chrono::duration_cast<std::chrono::milliseconds>(fit_end - fit_start);
     int num_periods = 12;
-    double* predictions_obj = predict_sarimax_old (obj, ts.data(), exog.data(), NULL, num_periods);
+    vector<double> newExog(num_periods * nexog, 0.0);
+    std::generate(newExog.begin(), newExog.end(), get_rand);
+    auto predict_start = std::chrono::high_resolution_clock::now();
+    std::vector<double> predictions = predict(model, newExog, num_periods);
+    auto predict_end = std::chrono::high_resolution_clock::now();
+    auto predict_ms = std::chrono::duration_cast<std::chrono::milliseconds>(predict_end - predict_start);
 
-    std::vector<double> predictions_from_obj(predictions_obj, predictions_obj+ num_periods * 2);
-    std::vector<double> predictions_vector = predict_sarimax(model, ts, exog, exog, 12);
-
-    std::vector<double> predictions_vector2 = predict_sarimax(model_from_obj, ts, exog, exog, 12);
-    std::vector<double> predictions_vector3 = predict_sarimax(model_from_obj2, ts, exog, exog, 12);
+    std::cout << "Fixed" << std::endl;
+    for (int i = 0; i < num_periods; i++) {
+        std::cout << "i: "<< i << " (" << predictions[i] << ", " << predictions[num_periods+i] << ")" << std::endl;
+    }
 
     auto auto_arima_start = std::chrono::high_resolution_clock::now();
-    auto_arima_object* auto_arima_obj = fit_autoarima_old(ts.data(), exog.data(), 5, 2, 5, 2, 1, 2, 12,  nexog, lin, method, opt, approximation, search, verbose);
+    CompiledModel auto_arima_model = autofit(ts, exog, 5, 2, 5, 2, 1, 2, 12,  nexog, lin, method, opt, approximation, search, verbose);
     auto auto_arima_end = std::chrono::high_resolution_clock::now();
     auto auto_arima_ms = std::chrono::duration_cast<std::chrono::milliseconds>(auto_arima_end-auto_arima_start);
 
-    auto auto_arima_vector_start = std::chrono::high_resolution_clock::now();
-    CompiledAutoArima auto_arima_model = fit_autoarima(ts, exog, 5, 2, 5, 2, 1, 2, 12,  nexog, lin, method, opt, approximation, search, verbose);
-    auto auto_arima_vector_end = std::chrono::high_resolution_clock::now();
-    auto auto_arima_vector_ms = std::chrono::duration_cast<std::chrono::milliseconds>(auto_arima_vector_end-auto_arima_vector_start);
+    auto predict_auto_start = std::chrono::high_resolution_clock::now();
+    std::vector<double> predictions_auto = predict(auto_arima_model, newExog, num_periods);
+    auto predict_auto_end = std::chrono::high_resolution_clock::now();
+    auto predict_auto_ms = std::chrono::duration_cast<std::chrono::milliseconds>(predict_auto_end - predict_auto_start);
 
+    std::cout << "auto" << std::endl;
+    for (int i = 0; i < num_periods; i++) {
+        std::cout << "i: "<< i << " (" << predictions_auto[i] << ", " << predictions_auto[num_periods+i] << ")" << std::endl;
+    }
 
-    printf("\n fit_sarimax: %d ms: \n" ,fit_sarimax_ms);
-    printf("\n fit_sarimax_vector: %d ms: \n" ,fit_sarimax_vector_ms);
-    printf("\n auto_arima: %d ms: \n" ,auto_arima_ms);
-    printf("\n auto_arima_vector: %d ms: \n" ,auto_arima_vector_ms);
+    std::cout << std::endl;
+    std::cout << std::endl;
+    std::cout << "Timing" << std::endl;
+    std::cout << "fit: " << fit_ms.count() << " ms" << std::endl;
+    std::cout << "autofit: " << auto_arima_ms.count() << " ms" << std::endl;
+    std::cout << "predict: " << predict_ms.count() << " ms" << std::endl;
     return 0;
-} 
+}

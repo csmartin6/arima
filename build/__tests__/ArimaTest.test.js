@@ -44,7 +44,7 @@ var fs_1 = require("fs");
 function testData() {
     var file = fs_1.readFileSync('src/api/data/S4248SM144NCEN.txt', 'utf-8');
     var numbers = file.split("\n").map(Number.parseFloat);
-    return numbers.slice(0, numbers.length - 20); // numbers.length - 12)
+    return numbers.slice(200, numbers.length - 20); // numbers.length - 12)
     // return [9225, 9948, 8758, 10839, 7266, 7578, 8688, 9162, 9369, 10167, 9507, 8923, 9272, 90175, 8949, 10843, 6558, 7481, 9475, 9424, 9351, 10552, 9077, 9273, 9420];
 }
 describe("Dummy Tests", function () {
